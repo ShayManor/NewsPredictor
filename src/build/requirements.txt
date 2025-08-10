@@ -1,0 +1,7 @@
+pandas
+sentence_transformers
+matplotlib
+datasets
+bertopic
+numpy
+cuml-cu12

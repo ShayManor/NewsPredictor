@@ -8,14 +8,12 @@ import json
 import os
 
 from cuml.cluster import HDBSCAN
-import numpy as np
 from cuml.manifold import UMAP
 from bertopic import BERTopic
 from datasets import load_dataset
 import pandas as pd
 from matplotlib import pyplot as plt
 from sentence_transformers import SentenceTransformer
-import optuna
 
 print("New trial")
 os.environ['TOKENIZERS_PARALLELISM'] = "True"
