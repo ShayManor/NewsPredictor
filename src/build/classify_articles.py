@@ -7,7 +7,7 @@
 import json
 import os
 
-from cuml.cluster  import HDBSCAN
+from cuml.cluster import HDBSCAN
 import numpy as np
 from cuml.manifold import UMAP
 from bertopic import BERTopic
@@ -16,6 +16,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sentence_transformers import SentenceTransformer
 import optuna
+
 print("New trial")
 os.environ['TOKENIZERS_PARALLELISM'] = "True"
 
@@ -40,9 +41,12 @@ encoder = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device=
 emb = encoder.encode(docs, batch_size=256, show_progress_bar=True, normalize_embeddings=True)
 
 print("Fitting clusters")
-def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samples, cluster_epsilon, min_topic_size, top_n_words, nr_bins, threshold):
+
+
+def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samples, cluster_epsilon, min_topic_size,
+                 top_n_words, nr_bins, threshold):
     umap_model = UMAP(n_neighbors=n_neighbors, n_components=n_components,
-                           metric="cosine", min_dist=min_dist, random_state=None, build_algo='nn_descent')
+                      metric="cosine", min_dist=min_dist, random_state=None, build_algo='nn_descent')
     print("Mapped Clusters")
 
     hdbscan_model = HDBSCAN(
@@ -73,44 +77,22 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
     topic_model.merge_topics(docs, topics)
     topic_model.update_topics(docs, topics=topics)
 
-    topics_over_time = topic_model.topics_over_time(docs=docs, topics=topics, timestamps=timestamps, nr_bins=nr_bins, global_tuning=False)
+    topics_over_time = topic_model.topics_over_time(docs=docs, topics=topics, timestamps=timestamps, nr_bins=nr_bins,
+                                                    global_tuning=False)
 
     fig = topic_model.visualize_topics_over_time(topics_over_time)
+    fig.show()
     with open('topics_array.json', 'w') as f:
         json.dump(topics, f)
-    print(topics)
+    print(f"Topics: {topics}")
     print("=========================================")
-    print(topics_over_time)
+    print(f"Topics over time: {topics_over_time}")
     return topics.count(-1)
+
+
 fit_clusters(38, 19, 0.26222776670842407, 4, 1, 0.19291905969822112, 16, 10, threshold=0.11078554780289114, nr_bins=30)
 
-def objective(trial):
-    n_neighbors       = trial.suggest_int   ("n_neighbors",        10, 80)
-    n_components      = trial.suggest_int   ("n_components",        5, 30)
-    min_dist          = trial.suggest_float ("min_dist",            0.0, 0.5)
-    min_cluster_size  = trial.suggest_int   ("min_cluster_size",    4, 20)
-    min_samples       = trial.suggest_int   ("min_samples",         1, 5)
-    cluster_epsilon   = trial.suggest_float ("cluster_epsilon",     0.0, 0.20)
-    min_topic_size    = trial.suggest_int   ("min_topic_size",      4, 20)
-    threshold         = trial.suggest_float ("reassign_threshold",  0.05, 0.25)
-
-    n_outliers = fit_clusters(
-        n_neighbors, n_components, min_dist,
-        min_cluster_size, min_samples, cluster_epsilon,
-        min_topic_size, top_n_words=10,
-        nr_bins=30, threshold=threshold
-    )
-    return n_outliers
-
-def sweep():
-    # Bayesian parameter sweep
-    sampler = optuna.samplers.TPESampler(seed=42, multivariate=True)  # Bayesian TPE
-    study = optuna.create_study(direction="minimize",
-                                sampler=sampler,
-                                pruner=optuna.pruners.MedianPruner(n_warmup_steps=10))
-    study.optimize(objective, n_trials=100, timeout=8 * 60 * 60)
-
 # if __name__ == '__main__':
-    # {'n_neighbors': 38, 'n_components': 19, 'min_dist': 0.26222776670842407, 'min_c
-    # luster_size': 4, 'min_samples': 1, 'cluster_epsilon': 0.19291905969822112, 'min_
-    # topic_size': 16, 'reassign_threshold': 0.11078554780289114}
+# {'n_neighbors': 38, 'n_components': 19, 'min_dist': 0.26222776670842407, 'min_c
+# luster_size': 4, 'min_samples': 1, 'cluster_epsilon': 0.19291905969822112, 'min_
+# topic_size': 16, 'reassign_threshold': 0.11078554780289114}
