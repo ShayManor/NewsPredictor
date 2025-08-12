@@ -7,6 +7,7 @@
 import json
 import os
 
+import numpy as np
 from cuml.cluster import HDBSCAN
 from cuml.manifold import UMAP
 from bertopic import BERTopic
@@ -20,7 +21,11 @@ os.environ['TOKENIZERS_PARALLELISM'] = "True"
 
 print("Pulling dataset")
 ds = load_dataset("LogeshChandran/newsroom", split="train").to_pandas()
-ds["date"] = pd.to_datetime(ds["date"], format="%Y%m%d", errors="coerce")
+print(len(ds))
+datetime = pd.to_datetime(ds["date"], format="%Y%m%d", errors="coerce")
+mask = datetime.notna()
+min_ts = datetime[mask].min()
+datetime = datetime.mask(datetime == min_ts, min_ts + pd.Timedelta('1ns'))
 print("Sorting dates and building window")
 ds = ds.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
 
@@ -30,9 +35,8 @@ ds["window_id"] = (ds["date"]
                    .astype("int64") // 10 ** 9)
 
 docs = (ds["title"].fillna("") + " " + ds["summary"].fillna("")).tolist()
-timestamps = ds["date"].dt.to_pydatetime().tolist()
 
-assert (len(docs) == len(timestamps))
+assert (len(docs) == len(datetime))
 
 print("Encoding docs")
 encoder = SentenceTransformer("sentence-transformers/all-mpnet-base-v2", device="cuda", trust_remote_code=True).half()
@@ -57,6 +61,7 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
         gen_min_span_tree=False,
     )
     print("Scanned clusters")
+
     topic_model = BERTopic(
         embedding_model=None,  # we pass precomputed embeddings
         umap_model=umap_model,
@@ -65,32 +70,43 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
         top_n_words=top_n_words,
         calculate_probabilities=False,
         verbose=False,
+        low_memory=True,
     )
 
     topics, probs = topic_model.fit_transform(docs, embeddings=emb)
     print("Fit embeddings")
-    topics = topic_model.reduce_outliers(docs, topics, probabilities=probs, strategy="c-tf-idf", threshold=threshold)
+    topics = topic_model.reduce_outliers(docs, topics, strategy="embeddings", embeddings=emb, threshold=threshold)
+    print("Updated topics")
     topic_model.update_topics(docs, topics=topics)
+    print("Reduced outliers")
+    print(f"Topics: {topics}")
+    return topics.count(-1)
 
     topic_model.merge_topics(docs, topics)
     topic_model.update_topics(docs, topics=topics)
+    print("=========================================")
+    print(f"Topics: {np.array(topics)}")
 
-    topics_over_time = topic_model.topics_over_time(docs=docs, topics=topics, timestamps=timestamps, nr_bins=nr_bins,
+    topics_over_time = topic_model.topics_over_time(docs=docs, topics=topics, timestamps=datetime.tolist(),
+                                                    nr_bins=nr_bins,
                                                     global_tuning=False)
 
     fig = topic_model.visualize_topics_over_time(topics_over_time)
     fig.show()
-    with open('topics_array.json', 'w') as f:
-        json.dump(topics, f)
-    print(f"Topics: {topics}")
+    # with open('topics_array.json', 'w') as f:
+    #     json.dump(topics, f)
+    print(f"Topics: {np.array(topics)}")
     print("=========================================")
     print(f"Topics over time: {topics_over_time}")
     return topics.count(-1)
 
 
-fit_clusters(38, 19, 0.26222776670842407, 4, 1, 0.19291905969822112, 16, 10, threshold=0.11078554780289114, nr_bins=30)
+print(f"Result: {fit_clusters(52, 23, 0.010292247147901223, 20, 5, 0.04246782213565523, 7, 10, threshold=0.13253202943404524, nr_bins=30)}")
 
 # if __name__ == '__main__':
 # {'n_neighbors': 38, 'n_components': 19, 'min_dist': 0.26222776670842407, 'min_c
 # luster_size': 4, 'min_samples': 1, 'cluster_epsilon': 0.19291905969822112, 'min_
 # topic_size': 16, 'reassign_threshold': 0.11078554780289114}
+
+# {'n_neighbors': 52, 'n_components': 23, 'min_dist': 0.010292247147901223, 'min_cluster_size': 20, 'min_samples': 5,
+#  'cluster_epsilon': 0.04246782213565523, 'min_topic_size': 7, 'reassign_threshold': 0.13253202943404524}

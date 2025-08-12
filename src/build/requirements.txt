@@ -5,3 +5,4 @@ datasets
 bertopic
 numpy
 cuml-cu12
+sklearn

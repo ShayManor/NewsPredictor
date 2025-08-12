@@ -1,4 +1,4 @@
-from src.build.classify_articles import fit_clusters
+from classify_articles import fit_clusters
 import optuna
 
 
@@ -10,7 +10,7 @@ def objective(trial):
     min_samples = trial.suggest_int("min_samples", 1, 5)
     cluster_epsilon = trial.suggest_float("cluster_epsilon", 0.0, 0.20)
     min_topic_size = trial.suggest_int("min_topic_size", 4, 20)
-    threshold = trial.suggest_float("reassign_threshold", 0.05, 0.25)
+    threshold = trial.suggest_float("reassign_threshold", 0.05, 0.5)
 
     n_outliers = fit_clusters(
         n_neighbors, n_components, min_dist,
