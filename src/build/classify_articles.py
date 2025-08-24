@@ -79,29 +79,21 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
     print("Updated topics")
     topic_model.update_topics(docs, topics=topics)
     print("Reduced outliers")
+    topics = [int(x) for x in topics]
+    jsonpath = 'topics_array.json'
+    if not os.path.exists(jsonpath):
+        open(jsonpath, 'x')
+    with open(jsonpath, 'w') as f:
+        json.dump(topics, f)
     print(f"Topics: {topics}")
-    return topics.count(-1)
-
-    topic_model.merge_topics(docs, topics)
-    topic_model.update_topics(docs, topics=topics)
-    print("=========================================")
-    print(f"Topics: {np.array(topics)}")
-
-    topics_over_time = topic_model.topics_over_time(docs=docs, topics=topics, timestamps=datetime.tolist(),
-                                                    nr_bins=nr_bins,
-                                                    global_tuning=False)
-
-    fig = topic_model.visualize_topics_over_time(topics_over_time)
-    fig.show()
-    # with open('topics_array.json', 'w') as f:
-    #     json.dump(topics, f)
-    print(f"Topics: {np.array(topics)}")
-    print("=========================================")
-    print(f"Topics over time: {topics_over_time}")
+    res = {}
+    for idx, topic in enumerate(topics):
+        res[docs[idx]] = topic
     return topics.count(-1)
 
 
-print(f"Result: {fit_clusters(52, 23, 0.010292247147901223, 20, 5, 0.04246782213565523, 7, 10, threshold=0.13253202943404524, nr_bins=30)}")
+print(
+    f"Result: {fit_clusters(52, 23, 0.010292247147901223, 20, 5, 0.04246782213565523, 7, 10, threshold=0.13253202943404524, nr_bins=30)}")
 
 # if __name__ == '__main__':
 # {'n_neighbors': 38, 'n_components': 19, 'min_dist': 0.26222776670842407, 'min_c
