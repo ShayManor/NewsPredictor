@@ -92,7 +92,7 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
     results_path = "results.json"
     if not os.path.exists(results_path):
         open(results_path, 'x').close()
-    with open(results_path) as f:
+    with open(results_path, "w") as f:
         json.dump(res, f)
     return topics.count(-1)
 
