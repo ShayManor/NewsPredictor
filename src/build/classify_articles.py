@@ -82,7 +82,7 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
     topics = [int(x) for x in topics]
     jsonpath = 'topics_array.json'
     if not os.path.exists(jsonpath):
-        open(jsonpath, 'x')
+        open(jsonpath, 'x').close()
     with open(jsonpath, 'w') as f:
         json.dump(topics, f)
     print(f"Topics: {topics}")
@@ -91,7 +91,7 @@ def fit_clusters(n_neighbors, n_components, min_dist, min_cluster_size, min_samp
         res[docs[idx]] = topic
     results_path = "results.json"
     if not os.path.exists(results_path):
-        open(results_path, 'x')
+        open(results_path, 'x').close()
     with open(results_path) as f:
         json.dump(res, f)
     return topics.count(-1)
